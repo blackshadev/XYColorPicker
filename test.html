@@ -1,0 +1,22 @@
+<html>
+
+<head>
+<title>XY Colorpicker</title>
+</head>
+
+<body>
+<canvas id="picker" width="500" height="500">
+    NOOP!
+</canvas>
+
+<script src="js/colorPicker.js" type="text/javascript"></script>
+<script type="text/javascript">
+    var picker = new XYPicker("picker", {
+        onClick: function(XY, e) {
+            console.log(XY);
+        }
+    });
+</script>
+
+</body>
+</html>
