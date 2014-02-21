@@ -7,6 +7,8 @@ var XYPicker = (function() {
         this.ctx = this.canvas.getContext("2d");
         this.imageData = null;
         this.active = false;
+        this.dragging = false;
+        this.selectOnDrag = false;
 
         this.slider = {};
         this.space = {};
@@ -18,6 +20,10 @@ var XYPicker = (function() {
 
 
         var self = this;
+        this.canvas.onmousedown = function(ev) { self.dragging = true; self.doClick(ev); };
+        this.canvas.onmouseup = function(ev) { self.dragging = false; self.doClick(ev); };
+        this.canvas.onmousemove = function(ev) { if(self.dragging) self.doClick(ev); };
+
         this.canvas.onclick = function(ev) { self.doClick(ev); };
         this.canvas.onresize = function(ev) { self.draw(true); };
         
@@ -35,8 +41,7 @@ var XYPicker = (function() {
             c: "#000"
         };
 
-        this.slider.cursor = this.slider.cursor || defaultCursor;
-        this.space.cursor = defaultCursor;
+        this.cursor = this.cursor || defaultCursor;
     };
     XYPicker.prototype.start = function() {
         this.active = true;
@@ -50,7 +55,7 @@ var XYPicker = (function() {
         this.draw();
     };
     XYPicker.prototype.createImage = function() {
-        this.setRGBSpace();
+        this.setRGBSpace("hue");
 
         var width = this.spaceDim;
         var height = this.spaceDim;
@@ -126,7 +131,7 @@ var XYPicker = (function() {
         this.ctx.beginPath();
         this.ctx.lineWidth = "4";
         this.ctx.strokeStyle = "#000";
-        this.drawCursor(this.space.cursor,
+        this.drawCursor(this.cursor,
             xy[0] * w, h - (xy[1] * h));
         this.ctx.stroke();
 
@@ -134,7 +139,7 @@ var XYPicker = (function() {
         this.ctx.beginPath();
         this.ctx.lineWidth = "4";
         this.ctx.strokeStyle = "#000";
-        this.drawCursor(this.slider.cursor, 
+        this.drawCursor(this.cursor, 
             xy[2] * w, sliderOffset + this.slider.height/2);
         this.ctx.stroke();
     };
@@ -185,7 +190,19 @@ var XYPicker = (function() {
         // var b =  0.0389 * X - 0.0685 * Y + 1.0296  * Z;
 
         switch(name) {
-            
+            case "hue": case "philips":
+                this.XYZtoRGB = function(X, Y, Z) {
+                    var r =  3.2406 * X - 1.5372 * Y - 0.4986 * Z;
+                    var g = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
+                    var b =  0.0557 * X - 0.204 * Y + 1.057 * Z;
+
+                    r = r <= 0.0031308 ? 12.92 * r :  (1.0 + 0.055) * Math.pow(r, (1.0 / 2.4)) - 0.055;
+                    g = g <= 0.0031308 ? 12.92 * g : (1.0 + 0.055) * Math.pow(g, (1.0 / 2.4)) - 0.055;
+                    b = b <= 0.0031308 ? 12.92 * b : (1.0 + 0.055) * Math.pow(b, (1.0 / 2.4)) - 0.055;
+                    
+                    return [r, g, b];
+                };
+                break;
             case "PAL": case "SECAM": case "sRGB":
                 this.XYZtoRGB = function(X, Y, Z) {
                     var r =  3.0629 * X - 1.3932 * Y - 0.4758 * Z;
@@ -218,21 +235,33 @@ var XYPicker = (function() {
         var y = (ev.offsetY - this.canvas.offsetTop);
         var xy = [x,y];
 
+        console.log(this.cursor);
+        
+        /* Cursor offset */
+        xy[0] += this.cursor.r;
+        xy[1] += this.cursor.r;
+
+
         if(this.onClick)
             this.onClick(xy, ev);
 
+        /* Inside the color space */
         if(xy[0] < this.spaceDim && xy[1] < this.spaceDim) {
+            
+
             xy[0] /= this.canvas.width;
             xy[1] = (this.spaceDim - xy[1]) / this.spaceDim;
 
             this.doSelect(xy[0], xy[1]);
         }
 
+        /* Brightness slider */
         if(xy[1] > sliderOffset && xy[1] < sliderOffset + this.slider.height) {
             this.doSelect(this.selected[0], this.selected[1], xy[0] / this.spaceDim);
         }
     };
     XYPicker.prototype.doSelect = function(x, y, bri) {
+        if(this.selectOnDrag && this.dragging) return;
         bri = bri === undefined ? this.selected[2] : bri;
         this.selected = [x, y, bri];
 
