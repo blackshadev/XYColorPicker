@@ -21,7 +21,7 @@ var XYPicker = (function() {
 
         var self = this;
         this.canvas.onmousedown = function(ev) { self.dragging = true; self.doClick(ev); };
-        this.canvas.onmouseup = function(ev) { self.dragging = false; self.doClick(ev); };
+        this.canvas.onmouseup = function(ev) { self.dragging = false; };
         this.canvas.onmousemove = function(ev) { if(self.dragging) self.doClick(ev); };
 
         this.canvas.onclick = function(ev) { self.doClick(ev); };
@@ -115,8 +115,6 @@ var XYPicker = (function() {
 
         if(!isClear) // reset canvas
             this.canvas.width = w;
-
-        console.log("repainted");
 
         this.createSlider();
 
@@ -234,8 +232,6 @@ var XYPicker = (function() {
         var x = (ev.offsetX - this.canvas.offsetLeft);
         var y = (ev.offsetY - this.canvas.offsetTop);
         var xy = [x,y];
-
-        console.log(this.cursor);
         
         /* Cursor offset */
         xy[0] += this.cursor.r;
@@ -261,13 +257,13 @@ var XYPicker = (function() {
         }
     };
     XYPicker.prototype.doSelect = function(x, y, bri) {
-        if(this.selectOnDrag && this.dragging) return;
+        var canSelect = (this.selectOnDrag && this.dragging || !this.dragging);
         bri = bri === undefined ? this.selected[2] : bri;
         this.selected = [x, y, bri];
 
         this.draw();
 
-        if(this.onSelect)
+        if(this.onSelect && canSelect)
             this.onSelect(this.selected);
     };
 
